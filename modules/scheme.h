@@ -64,7 +64,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
     for (int i = 2; i < (num_zones-2); ++i) {
       for (int j = 2; j < (num_zones-2); ++j) {
         u1[i*num_zones+j] = u0[i*num_zones+j] +
-                            du_dt(u0[(i-2)*num_zones+(j+1)],
+                            du_dt(u0[(i-2)*num_zones+(j+0)],
                                   u0[(i-1)*num_zones+(j+0)],
                                   u0[(i+0)*num_zones+(j+0)],
                                   u0[(i+1)*num_zones+(j+0)],
@@ -82,7 +82,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
       for (int j = 2; j < (num_zones-2); ++j) {
         u2[i*num_zones+j] = (3.0 / 4.0) * u0[i*num_zones+j] +
                             (1.0 / 4.0) * u1[i*num_zones+j] +
-                            (1.0 / 4.0) * du_dt(u1[(i-2)*num_zones+(j+1)],
+                            (1.0 / 4.0) * du_dt(u1[(i-2)*num_zones+(j+0)],
                                                 u1[(i-1)*num_zones+(j+0)],
                                                 u1[(i+0)*num_zones+(j+0)],
                                                 u1[(i+1)*num_zones+(j+0)],
@@ -101,7 +101,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
       for (int j = 2; j < (num_zones-2); ++j) {
         u3[i*num_zones+j] = (1.0 / 3.0) * u0[i*num_zones+j] +
                             (2.0 / 3.0) * u2[i*num_zones+j] +
-                            (2.0 / 3.0) * du_dt(u2[(i-2)*num_zones+(j+1)],
+                            (2.0 / 3.0) * du_dt(u2[(i-2)*num_zones+(j+0)],
                                                 u2[(i-1)*num_zones+(j+0)],
                                                 u2[(i+0)*num_zones+(j+0)],
                                                 u2[(i+1)*num_zones+(j+0)],
