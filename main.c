@@ -12,7 +12,13 @@ int main() {
   // initialize spatial grid, time, and concentration
   double x[num_zones];
   double y[num_zones];
-  construct_grid(x, y);
+  const double x_l     = 0.0;
+  const double x_r     = 1.0;
+  const double dx      = (x_r - x_l) / num_zones;
+  const double y_l     = 0.0;
+  const double y_r     = 1.0;
+  const double dy      = (y_r - y_l) / num_zones;
+  construct_grid(x, y, x_l, y_l, dx, dy);
   double t   = 0.0;
   double *u0 = malloc(num_zones * num_zones * sizeof(double));
   double *ui = malloc(num_zones * num_zones * sizeof(double));
