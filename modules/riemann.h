@@ -30,6 +30,11 @@ double advective_flux(double ul, double ur, double x, double y, char axis) {
 
 // source terms
 double source_terms(double x, double y, double t) {
+  if (sqrt((x - 0.75) * (x - 0.75) + (y - 0.75) * (y - 0.75)) < 0.025) {
+    if (0.33 < t < 0.335) {
+      return 1.0;
+    } return 0.0;
+  }
   return 0.0;
 }
 
