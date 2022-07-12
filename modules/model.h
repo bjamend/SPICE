@@ -23,10 +23,7 @@ double diffusion_coefficient(double x, double y) {
 }
 
 
-// establish initial u
+// establish initial u (should be 0 by default)
 double initial_condition(double x, double y) {
-  if (sqrt((x - 0.5) * (x - 0.5) + (y - 0.5) * (y - 0.5)) < 0.025) {
-    return 1.0;
-  }
   return 0.0;
 }

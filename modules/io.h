@@ -1,5 +1,5 @@
 // -----------------------------------------------------------------------------
-// Save data to text file (currently no i, only o).
+// Save data to text file.
 // -----------------------------------------------------------------------------
 
 
@@ -17,4 +17,17 @@ void export_data(double *x, double *y, double *u, double *u0, int num_zones) {
     }
   }
   fclose(f);
+}
+
+// import spatial and temporal coordinates for r-process events
+void generate_array(double *sites) {
+  FILE *file;
+  file = fopen("data/eventsites.csv", "r");
+  double num;
+  int i = 0;
+  while(fscanf(file, "%lf", &num) == 1) {
+    sites[i] = num;
+    i++;
+  }
+  fclose(file);
 }

@@ -49,7 +49,7 @@ double timestep(double *x, double *y, double dx, double dy) {
 
 
 // main rk3 algorithm
-void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
+void rk3(double *u0, double t, double *x, double *y, double dx, double dy, double *events) {
 
   while (t < t_final) {
 
@@ -73,7 +73,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
                                   u0[(i+0)*num_zones+(j-1)],
                                   u0[(i+0)*num_zones+(j+1)],
                                   u0[(i+0)*num_zones+(j+2)],
-                                  x[i], y[j], dx, dy, t) * dt;
+                                  x[i], y[j], dx, dy, t, events) * dt;
       }
     }
     t += dt;
@@ -91,7 +91,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
                                                 u1[(i+0)*num_zones+(j-1)],
                                                 u1[(i+0)*num_zones+(j+1)],
                                                 u1[(i+0)*num_zones+(j+2)],
-                                                x[i], y[j], dx, dy, t) * dt;
+                                                x[i], y[j], dx, dy, t, events) * dt;
       }
     }
     free(u1);
@@ -110,7 +110,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
                                                 u2[(i+0)*num_zones+(j-1)],
                                                 u2[(i+0)*num_zones+(j+1)],
                                                 u2[(i+0)*num_zones+(j+2)],
-                                                x[i], y[j], dx, dy, t) * dt;
+                                                x[i], y[j], dx, dy, t, events) * dt;
       }
     }
     free(u2);

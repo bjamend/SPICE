@@ -57,3 +57,11 @@ double plm_gradient(double a, double b, double c) {
   double plm_theta = 1.5;
   return minmod(plm_theta * (b - a), 0.5 * (c - a), plm_theta * (c - b));
 }
+
+
+// generate random number
+double random_number(double min, double max) {
+  double range = (max - min);
+  double div   = RAND_MAX / range;
+  return min + (rand() / div);
+}

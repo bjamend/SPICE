@@ -1,15 +1,16 @@
 #include <stdio.h>
-#include <math.h>
 #include <stdlib.h>
+#include <math.h>
 #include <string.h>
 #include "modules/io.h"
-#include "modules/grid.h"
 #include "modules/scheme.h"
 
 
 int main() {
 
   // initialize spatial grid, time, and concentration
+  double events[10];
+  generate_array(events);
   double x[num_zones];
   double y[num_zones];
   const double x_l     = 0.0;
@@ -30,7 +31,7 @@ int main() {
   }
 
   // evolve the simulation in time
-  rk3(u0, t, x, y, dx, dy);
+  rk3(u0, t, x, y, dx, dy, events);
 
   // store initial and final data in a text file
   export_data(x, y, u0, ui, num_zones);
