@@ -19,7 +19,7 @@ double flow_velocity(double x, double y, char axis) {
 
 // spatially-inhomogeneous diffusion coefficient
 double diffusion_coefficient(double x, double y) {
-  return 0.05;
+  return 0.02;
 }
 
 

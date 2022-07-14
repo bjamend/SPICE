@@ -32,12 +32,20 @@ double advective_flux(double ul, double ur, double x, double y, char axis) {
 // source terms
 double source_terms(double x, double y, double t, double *events) {
   double result = 0.0;
-  for (int i = 0; i < 10; ++i) {
+  for (int i = 0; i < 1000; ++i) {
     double t_0 = events[3*i];
     double x_0 = events[3*i+1];
     double y_0 = events[3*i+2];
-    result += (exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / r / r) *
-               exp(-(t - t_0) * (t - t_0) / tau / tau));
+    if (((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) < ((100.0 * r) * (100.0 * r))) {
+      if (((t - t_0) * (t - t_0)) < (100.0 * tau * 100.0 * tau)) {
+        result += (exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / r / r) *
+                   exp(-(t - t_0) * (t - t_0) / tau / tau));
+      } else {
+        result += 0.0;
+      }
+    } else {
+      result += 0.0;
+    }
   }
   return result;
 }

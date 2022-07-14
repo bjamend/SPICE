@@ -9,7 +9,7 @@
 int main() {
 
   // initialize spatial grid, time, and concentration
-  double events[10];
+  double *events = malloc(3000 * sizeof(double));
   generate_array(events);
   double x[num_zones];
   double y[num_zones];
