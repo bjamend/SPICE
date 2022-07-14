@@ -31,7 +31,8 @@ int main() {
   }
 
   // evolve the simulation in time
-  rk3(u0, t, x, y, dx, dy, events);
+  int counter = 0;
+  rk3(u0, t, x, y, dx, dy, events, counter);
 
   // store initial and final data in a text file
   export_data(x, y, u0, ui, num_zones);
