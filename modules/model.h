@@ -19,11 +19,12 @@ double flow_velocity(double x, double y, char axis) {
 
 // spatially-inhomogeneous diffusion coefficient
 double diffusion_coefficient(double x, double y) {
-  return 0.02;
+  return 0.2;
 }
 
 
 // establish initial u (should be 0 by default)
 double initial_condition(double x, double y) {
+  // return sin(10.0 * 3.14159 * x) * sin(10.0 * 3.14159 * y);
   return 0.0;
 }

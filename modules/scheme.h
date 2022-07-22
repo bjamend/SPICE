@@ -5,6 +5,7 @@
 
 #include "boundaries.h"
 #include "riemann.h"
+#include "io.h"
 
 
 // minimum timestep based on flow velocity
@@ -49,9 +50,20 @@ double timestep(double *x, double *y, double dx, double dy) {
 
 
 // main rk3 algorithm
-void rk3(double *u0, double t, double *x, double *y, double dx, double dy, double *events, int counter) {
+void rk3(double *u0, double t, double *x, double *y, double dx, double dy, double *events) {
+
+  int counter = 0;
+  int time_counter = 0;
 
   while (t < t_final) {
+
+    double counter0 = counter;
+
+    while (events[3*counter] < t) {
+      counter += 1;
+    }
+
+    // printf("%f\n", counter-counter0);
 
     double dt  = cfl * timestep(x, y, dx, dy);
     double *u1 = malloc(num_zones * num_zones * sizeof(double));
@@ -74,7 +86,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy, doubl
                                   u0[(i+0)*num_zones+(j+1)],
                                   u0[(i+0)*num_zones+(j+2)],
                                   x[i], y[j], dx, dy, t, events,
-                                  counter) * dt;
+                                  counter0, counter) * dt;
       }
     }
     t += dt;
@@ -93,7 +105,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy, doubl
                                                 u1[(i+0)*num_zones+(j+1)],
                                                 u1[(i+0)*num_zones+(j+2)],
                                                 x[i], y[j], dx, dy, t, events,
-                                                counter) * dt;
+                                                counter0, counter) * dt;
       }
     }
     free(u1);
@@ -113,7 +125,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy, doubl
                                                 u2[(i+0)*num_zones+(j+1)],
                                                 u2[(i+0)*num_zones+(j+2)],
                                                 x[i], y[j], dx, dy, t, events,
-                                                counter) * dt;
+                                                counter0, counter) * dt;
       }
     }
     free(u2);
@@ -121,8 +133,13 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy, doubl
     memcpy(u0, u3, num_zones * num_zones * sizeof(double));
     free(u3);
 
-  printf("t=%f\n", t);
-  counter += 1;
+    if ((time_counter % 100) == 0) {
+      export_data(x, y, u0, u0, num_zones, time_counter);
+    }
+
+    time_counter += 1;
+
+  printf("t=%f, %d\n", t, time_counter);
 
   }
 }

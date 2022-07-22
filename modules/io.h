@@ -4,8 +4,10 @@
 
 
 // exports coordinates, initial u, and final u to a text file
-void export_data(double *x, double *y, double *u, double *u0, int num_zones) {
-  FILE *f = fopen("data/data.txt", "w");
+void export_data(double *x, double *y, double *u, double *u0, int num_zones, int counter) {
+  char filepath[256];
+  snprintf(filepath, sizeof(filepath), "data/data%d.txt", counter);
+  FILE *f = fopen(filepath, "w");
   if (f == NULL) {
     printf("Error opening file!\n");
     exit(1);

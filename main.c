@@ -2,14 +2,13 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "modules/io.h"
 #include "modules/scheme.h"
 
 
 int main() {
 
   // initialize spatial grid, time, and concentration
-  double *events = malloc(3000 * sizeof(double));
+  double *events = malloc(3 * 10000 * sizeof(double));
   generate_array(events);
   double x[num_zones];
   double y[num_zones];
@@ -31,11 +30,10 @@ int main() {
   }
 
   // evolve the simulation in time
-  int counter = 0;
-  rk3(u0, t, x, y, dx, dy, events, counter);
+  rk3(u0, t, x, y, dx, dy, events);
 
   // store initial and final data in a text file
-  export_data(x, y, u0, ui, num_zones);
+  // export_data(x, y, u0, ui, num_zones);
 
   free(u0);
   free(ui);

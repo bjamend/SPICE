@@ -30,14 +30,17 @@ double advective_flux(double ul, double ur, double x, double y, char axis) {
 
 
 // source terms
-double source_terms(double x, double y, double t, double *events,
+double source_terms(double x, double y, double t, double *events, int counter0,
                     int counter) {
-  double x_0 = 0.5;
-  double y_0 = 0.5;
-  if (counter == 100) {
-    return exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / r / r);
+  double result = 0.0;
+  for (int i = counter0; i < counter; ++i) {
+    double x_0 = events[3*i+1];
+    double y_0 = events[3*i+2];
+    if (((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) < (25.0 * r * r)) {
+      result += 10000.0 * exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / r / r);
+    }
   }
-  return 0.0;
+  return result;
 }
 
 
@@ -57,7 +60,7 @@ double diffusive_flux(double ul, double ur, double x, double y, double dx,
 double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
              double u_ip2j, double u_ijm2, double u_ijm1, double u_ijp1,
              double u_ijp2, double x, double y, double dx, double dy,
-             double t, double *events, int counter) {
+             double t, double *events, int counter0, int counter) {
 
   double u_limhj = u_im1j + 0.5 * plm_gradient(u_im2j, u_im1j, u_ij);
   double u_rimhj = u_ij   - 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
@@ -77,6 +80,6 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
                   diffusive_flux(u_ij, u_ijp1, x, y + 0.5 * dy, dx, dy, 'y');
   double g_ijmh = advective_flux(u_lijmh, u_rijmh, x, y - 0.5 * dy, 'y') +
                   diffusive_flux(u_ijm1, u_ij, x, y - 0.5 * dy, dx, dy, 'y');
-  double source = source_terms(x, y, t, events, counter);
+  double source = source_terms(x, y, t, events, counter0, counter);
   return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source;
 }
