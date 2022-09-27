@@ -37,9 +37,3 @@ for l in range(N):
     fig.savefig(f'./frames/{i}.png')
 
     f.close()
-
-# fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 6))
-# ax1.pcolormesh(x_values, y_values, u0_values, shading='auto', cmap='plasma')
-# ax2.pcolormesh(x_values, y_values, u_values, shading='auto', cmap='plasma')
-# plt.tight_layout()
-# plt.show()

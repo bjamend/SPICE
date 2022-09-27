@@ -10,11 +10,6 @@
 #define min3(a, b, c) (min2(a, min2(b, c)))
 
 
-// -----------------------------------------------------------------------------
-// Various types of boundary conditions.
-// -----------------------------------------------------------------------------
-
-
 void boundary_condition(double *u0, double *u1, double *u2, double *u3,
                         int num_zones) {
 
@@ -49,11 +44,6 @@ void boundary_condition(double *u0, double *u1, double *u2, double *u3,
 }
 
 
-// -----------------------------------------------------------------------------
-// Additional math functions not included in standard libraries.
-// -----------------------------------------------------------------------------
-
-
 // slope limiting function
 double minmod(double a, double b, double c) {
   return 0.25 * fabs(sign(a) + sign(b)) * (sign(a) + sign(c)) *
@@ -68,11 +58,6 @@ double plm_gradient(double a, double b, double c) {
 }
 
 
-// -----------------------------------------------------------------------------
-// Construct a grid of vertices.
-// -----------------------------------------------------------------------------
-
-
 // populates arrays with vertex coordinates
 void construct_grid(double *x, double *y, double x_l, double y_l,
                     double dx, double dy){
@@ -81,11 +66,6 @@ void construct_grid(double *x, double *y, double x_l, double y_l,
     y[i] = y_l + (i + 0.5) * dy;
   }
 }
-
-
-// -----------------------------------------------------------------------------
-// Save data to text file.
-// -----------------------------------------------------------------------------
 
 
 // exports coordinates, initial u, and final u to a text file
@@ -121,12 +101,6 @@ void generate_array(double *sites) {
 }
 
 
-// -----------------------------------------------------------------------------
-// Prescriptions for diffusion coefficients and flow velocities, as well as
-// an initial mass concentration.
-// -----------------------------------------------------------------------------
-
-
 // spatially-inhomogeneous large-scale flow velocity
 double flow_velocity(double x, double y, char axis) {
   double vx = 0.0;
@@ -150,11 +124,6 @@ double diffusion_coefficient(double x, double y) {
 double initial_condition(double x, double y) {
   return 0.0;
 }
-
-
-// -----------------------------------------------------------------------------
-// Compute fluxes to solve the Riemann problem (2nd-order).
-// -----------------------------------------------------------------------------
 
 
 // flux from advective term in diffusive-advective equation
@@ -233,11 +202,6 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
   double source = source_terms(x, y, t, events, counter0, counter);
   return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source;
 }
-
-
-// -----------------------------------------------------------------------------
-// Evolve the simulation in time (RK scheme, 3rd order).
-// -----------------------------------------------------------------------------
 
 
 // minimum timestep based on flow velocity
