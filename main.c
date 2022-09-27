@@ -3,6 +3,12 @@
 #include <math.h>
 #include <string.h>
 
+#include "input.h"
+
+#define sign(x) ((x > 0.0) ? 1.0 : ((x < 0.0) ? -1.0 : 0.0))
+#define min2(a, b) (a < b ? a : b)
+#define min3(a, b, c) (min2(a, min2(b, c)))
+
 
 // -----------------------------------------------------------------------------
 // Various types of boundary conditions.
@@ -10,11 +16,8 @@
 
 
 void boundary_condition(double *u0, double *u1, double *u2, double *u3,
-                        int num_zones, char type) {
-  // f = Fixed
-  // o = Outflow
+                        int num_zones) {
 
-  if (type == 'f') {
     for (int i = 0; i < num_zones; ++i) {
       u1[0 * num_zones + i] = u0[0 * num_zones + i];
       u1[1 * num_zones + i] = u0[1 * num_zones + i];
@@ -43,85 +46,12 @@ void boundary_condition(double *u0, double *u1, double *u2, double *u3,
       u3[i * num_zones + (num_zones - 1)] = u0[i * num_zones + (num_zones - 1)];
       u3[i * num_zones + (num_zones - 2)] = u0[i * num_zones + (num_zones - 2)];
     }
-  }
-  if (type == 'o') {
-    for (int i = 0; i < num_zones; ++i) {
-      u1[0 * num_zones + i] = u0[2 * num_zones + i];
-      u1[1 * num_zones + i] = u0[2 * num_zones + i];
-      u1[(num_zones - 1) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u1[(num_zones - 2) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u1[i * num_zones + 0] = u0[i * num_zones + 2];
-      u1[i * num_zones + 1] = u0[i * num_zones + 2];
-      u1[i * num_zones + (num_zones - 1)] = u0[i * num_zones + (num_zones - 3)];
-      u1[i * num_zones + (num_zones - 2)] = u0[i * num_zones + (num_zones - 3)];
-
-      u2[0 * num_zones + i] = u0[2 * num_zones + i];
-      u2[1 * num_zones + i] = u0[2 * num_zones + i];
-      u2[(num_zones - 1) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u2[(num_zones - 2) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u2[i * num_zones + 0] = u0[i * num_zones + 2];
-      u2[i * num_zones + 1] = u0[i * num_zones + 2];
-      u2[i * num_zones + (num_zones - 1)] = u0[i * num_zones + (num_zones - 3)];
-      u2[i * num_zones + (num_zones - 2)] = u0[i * num_zones + (num_zones - 3)];
-
-      u3[0 * num_zones + i] = u0[2 * num_zones + i];
-      u3[1 * num_zones + i] = u0[2 * num_zones + i];
-      u3[(num_zones - 1) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u3[(num_zones - 2) * num_zones + i] = u0[(num_zones - 3) * num_zones + i];
-      u3[i * num_zones + 0] = u0[i * num_zones + 2];
-      u3[i * num_zones + 1] = u0[i * num_zones + 2];
-      u3[i * num_zones + (num_zones - 1)] = u0[i * num_zones + (num_zones - 3)];
-      u3[i * num_zones + (num_zones - 2)] = u0[i * num_zones + (num_zones - 3)];
-    }
-  }
 }
 
 
 // -----------------------------------------------------------------------------
 // Additional math functions not included in standard libraries.
 // -----------------------------------------------------------------------------
-
-
-// returns the sign of a value
-double sign(double x) {
-  if (x < 0.0) {
-    return -1.0;
-  } else if (x > 0.0) {
-    return 1.0;
-  } else {
-    return 0.0;
-  }
-}
-
-
-// returns the minimum of three values
-double min3(double a, double b, double c) {
-  if (a < b) {
-    if (a < c) {
-      return a;
-    } else if (a > c) {
-      return c;
-    } else {
-      return a;
-    }
-  } else if (b < a) {
-    if (b < c) {
-      return b;
-    } else if (b > c) {
-      return c;
-    } else {
-      return c;
-    }
-  } else if (a == b) {
-    if (c < b) {
-      return c;
-    } else {
-      return b;
-    };
-  } else {
-    return 0.0;
-  }
-}
 
 
 // slope limiting function
@@ -138,20 +68,9 @@ double plm_gradient(double a, double b, double c) {
 }
 
 
-// generate random number
-double random_number(double min, double max) {
-  double range = (max - min);
-  double div   = RAND_MAX / range;
-  return min + (rand() / div);
-}
-
-
 // -----------------------------------------------------------------------------
 // Construct a grid of vertices.
 // -----------------------------------------------------------------------------
-
-
-#include "input.h"
 
 
 // populates arrays with vertex coordinates
@@ -229,7 +148,6 @@ double diffusion_coefficient(double x, double y) {
 
 // establish initial u (should be 0 by default)
 double initial_condition(double x, double y) {
-  // return sin(10.0 * 3.14159 * x) * sin(10.0 * 3.14159 * y);
   return 0.0;
 }
 
@@ -378,15 +296,13 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
       counter += 1;
     }
 
-    // printf("%f\n", counter-counter0);
-
     double dt  = cfl * timestep(x, y, dx, dy);
     double *u1 = malloc(num_zones * num_zones * sizeof(double));
     double *u2 = malloc(num_zones * num_zones * sizeof(double));
     double *u3 = malloc(num_zones * num_zones * sizeof(double));
     double t0  = t;
 
-    boundary_condition(u0, u1, u2, u3, num_zones, 'o');
+    boundary_condition(u0, u1, u2, u3, num_zones);
 
     for (int i = 2; i < (num_zones-2); ++i) {
       for (int j = 2; j < (num_zones-2); ++j) {
