@@ -58,6 +58,37 @@ double plm_gradient(double a, double b, double c) {
 }
 
 
+// computes the factorial of an integer n
+int factorial(int n) {
+  if (n==0) {
+    return 1;
+  }
+  return n * factorial(n-1);
+}
+
+
+// generates a random double between 0 and 1
+double random_double() {
+    return (double)rand() / (double)RAND_MAX ;
+}
+
+
+// generates samples from a poisson distribution
+int poisson_sample(double l, int x_max) {
+  double u = random_double();
+  int x = 0;
+  double p = 0;
+  while (x < x_max) {
+    p += (pow(l, x) * exp(-l) / factorial(x));
+    if (u <= p) {
+      return x;
+    }
+    x += 1;
+  }
+  return 0;
+}
+
+
 // populates arrays with vertex coordinates
 void construct_grid(double *x, double *y, double x_l, double y_l,
                     double dx, double dy){
@@ -85,19 +116,6 @@ void export_data(double *x, double *y, double *u, double *u0, int num_zones,
     }
   }
   fclose(f);
-}
-
-// import spatial and temporal coordinates for r-process events
-void generate_array(double *sites) {
-  FILE *file;
-  file = fopen("data/eventsites.csv", "r");
-  double num;
-  int i = 0;
-  while(fscanf(file, "%lf", &num) == 1) {
-    sites[i] = num;
-    i++;
-  }
-  fclose(file);
 }
 
 
@@ -148,16 +166,15 @@ double advective_flux(double ul, double ur, double x, double y, char axis) {
 
 
 // source terms
-double source_terms(double x, double y, double t, double *events, int counter0,
-                    int counter) {
+double source_terms(double x, double y, double dt) {
+  int lambda = dt / 1.0E-7;
+  int source_count = poisson_sample(lambda, 10000);
   double result = 0.0;
-  for (int i = counter0; i < counter; ++i) {
-    double x_0 = events[3*i+1];
-    double y_0 = events[3*i+2];
-    if (((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) < (25.0 * r * r)) {
-      result += 10000.0 * exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0))
-                              / r / r);
-    }
+  for (int i = 0; i < source_count; ++i) {
+    double x_0 = random_double();
+    double y_0 = random_double();
+    result += 10000.0 * exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0))
+                            / r / r);
   }
   return result;
 }
@@ -179,7 +196,7 @@ double diffusive_flux(double ul, double ur, double x, double y, double dx,
 double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
              double u_ip2j, double u_ijm2, double u_ijm1, double u_ijp1,
              double u_ijp2, double x, double y, double dx, double dy,
-             double t, double *events, int counter0, int counter) {
+             double t, double dt) {
 
   double u_limhj = u_im1j + 0.5 * plm_gradient(u_im2j, u_im1j, u_ij);
   double u_rimhj = u_ij   - 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
@@ -199,7 +216,7 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
                   diffusive_flux(u_ij, u_ijp1, x, y + 0.5 * dy, dx, dy, 'y');
   double g_ijmh = advective_flux(u_lijmh, u_rijmh, x, y - 0.5 * dy, 'y') +
                   diffusive_flux(u_ijm1, u_ij, x, y - 0.5 * dy, dx, dy, 'y');
-  double source = source_terms(x, y, t, events, counter0, counter);
+  double source = source_terms(x, y, dt);
   return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source;
 }
 
@@ -246,19 +263,11 @@ double timestep(double *x, double *y, double dx, double dy) {
 
 
 // main rk3 algorithm
-void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
-         double *events) {
+void rk3(double *u0, double t, double *x, double *y, double dx, double dy) {
 
-  int counter = 0;
   int time_counter = 0;
 
   while (t < t_final) {
-
-    double counter0 = counter;
-
-    while (events[3*counter] < t) {
-      counter += 1;
-    }
 
     double dt  = cfl * timestep(x, y, dx, dy);
     double *u1 = malloc(num_zones * num_zones * sizeof(double));
@@ -280,8 +289,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
                                   u0[(i+0)*num_zones+(j-1)],
                                   u0[(i+0)*num_zones+(j+1)],
                                   u0[(i+0)*num_zones+(j+2)],
-                                  x[i], y[j], dx, dy, t, events,
-                                  counter0, counter) * dt;
+                                  x[i], y[j], dx, dy, t, dt) * dt;
       }
     }
     t += dt;
@@ -299,8 +307,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
                                                 u1[(i+0)*num_zones+(j-1)],
                                                 u1[(i+0)*num_zones+(j+1)],
                                                 u1[(i+0)*num_zones+(j+2)],
-                                                x[i], y[j], dx, dy, t, events,
-                                                counter0, counter) * dt;
+                                                x[i], y[j], dx, dy, t, dt) * dt;
       }
     }
     free(u1);
@@ -319,8 +326,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
                                                 u2[(i+0)*num_zones+(j-1)],
                                                 u2[(i+0)*num_zones+(j+1)],
                                                 u2[(i+0)*num_zones+(j+2)],
-                                                x[i], y[j], dx, dy, t, events,
-                                                counter0, counter) * dt;
+                                                x[i], y[j], dx, dy, t, dt) * dt;
       }
     }
     free(u2);
@@ -343,8 +349,6 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy,
 int main() {
 
   // initialize spatial grid, time, and concentration
-  double *events = malloc(3 * 10000 * sizeof(double));
-  generate_array(events);
   double x[num_zones];
   double y[num_zones];
   const double x_l     = 0.0;
@@ -365,7 +369,7 @@ int main() {
   }
 
   // evolve the simulation in time
-  rk3(u0, t, x, y, dx, dy, events);
+  rk3(u0, t, x, y, dx, dy);
 
   free(u0);
   free(ui);
