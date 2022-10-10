@@ -2,7 +2,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import os
 
-with open(os.path.normpath(os.getcwd()) + '/data/data.txt') as f:
+with open(os.path.normpath(os.getcwd()) + '/data/data665.txt') as f:
     lines = f.readlines()
     x  = [float(line.split(',')[0]) for line in lines]
     y  = [float(line.split(',')[1]) for line in lines]
@@ -24,6 +24,6 @@ for i in range(num_zones):
         u_values[j, i]  = u[num_zones * i + j]
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-ax.pcolormesh(x_values, y_values, u_values, shading='auto', cmap='plasma')
+ax.pcolormesh(x_values, y_values, u_values, shading='auto', cmap='plasma', vmin=0, vmax=0.135)
 plt.tight_layout()
 plt.show()
