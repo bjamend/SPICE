@@ -9,6 +9,8 @@
 #define min2(a, b)    (a < b ? a : b)
 #define min3(a, b, c) (min2(a, min2(b, c)))
 
+#define MIN_TIMESTEP_THRESHOLD 1E-12
+
 
 struct Source {
     double x, y;
@@ -19,44 +21,29 @@ void boundary_condition(double *u0, double *u1, double *u2, double *u3,
                         int num_zones)
 {
     for (int i = 0; i < num_zones; ++i) {
-        u1[0 * num_zones + i] = u0[0 * num_zones + i];
-        u1[1 * num_zones + i] = u0[1 * num_zones + i];
-        u1[(num_zones - 1) * num_zones + i] =
-            u0[(num_zones - 1) * num_zones + i];
-        u1[(num_zones - 2) * num_zones + i] =
-            u0[(num_zones - 2) * num_zones + i];
-        u1[i * num_zones + 0] = u0[i * num_zones + 0];
-        u1[i * num_zones + 1] = u0[i * num_zones + 1];
-        u1[i * num_zones + (num_zones - 1)] =
-            u0[i * num_zones + (num_zones - 1)];
-        u1[i * num_zones + (num_zones - 2)] =
-            u0[i * num_zones + (num_zones - 2)];
+      for (int l = 0; l < 2; ++l) {
+        u1[i * num_zones + l] = u0[i * num_zones + num_zones - 4 + l];
+        u1[i * num_zones + num_zones - l - 1] = u0[i * num_zones + 3 + l];
 
-        u2[0 * num_zones + i] = u0[0 * num_zones + i];
-        u2[1 * num_zones + i] = u0[1 * num_zones + i];
-        u2[(num_zones - 1) * num_zones + i] =
-            u0[(num_zones - 1) * num_zones + i];
-        u2[(num_zones - 2) * num_zones + i] =
-            u0[(num_zones - 2) * num_zones + i];
-        u2[i * num_zones + 0] = u0[i * num_zones + 0];
-        u2[i * num_zones + 1] = u0[i * num_zones + 1];
-        u2[i * num_zones + (num_zones - 1)] =
-            u0[i * num_zones + (num_zones - 1)];
-        u2[i * num_zones + (num_zones - 2)] =
-            u0[i * num_zones + (num_zones - 2)];
+        u2[i * num_zones + l] = u0[i * num_zones + num_zones - 4 + l];
+        u2[i * num_zones + num_zones - l - 1] = u0[i * num_zones + 3 + l];
 
-        u3[0 * num_zones + i] = u0[0 * num_zones + i];
-        u3[1 * num_zones + i] = u0[1 * num_zones + i];
-        u3[(num_zones - 1) * num_zones + i] =
-            u0[(num_zones - 1) * num_zones + i];
-        u3[(num_zones - 2) * num_zones + i] =
-            u0[(num_zones - 2) * num_zones + i];
-        u3[i * num_zones + 0] = u0[i * num_zones + 0];
-        u3[i * num_zones + 1] = u0[i * num_zones + 1];
-        u3[i * num_zones + (num_zones - 1)] =
-            u0[i * num_zones + (num_zones - 1)];
-        u3[i * num_zones + (num_zones - 2)] =
-            u0[i * num_zones + (num_zones - 2)];
+        u3[i * num_zones + l] = u0[i * num_zones + num_zones - 4 + l];
+        u3[i * num_zones + num_zones - l - 1] = u0[i * num_zones + 3 + l];
+      }
+    }
+
+    for (int j = 0; j < num_zones; ++j) {
+      for (int l = 0; l < 2; ++l) {
+        u1[l * num_zones + j] = u0[(num_zones - 4 + l) * num_zones + j];
+        u1[(num_zones - l - 1) * num_zones + j] = u0[(3 - l) * num_zones + j];
+
+        u2[l * num_zones + j] = u0[(num_zones - 4 + l) * num_zones + j];
+        u2[(num_zones - l - 1) * num_zones + j] = u0[(3 - l) * num_zones + j];
+
+        u3[l * num_zones + j] = u0[(num_zones - 4 + l) * num_zones + j];
+        u3[(num_zones - l - 1) * num_zones + j] = u0[(3 - l) * num_zones + j];
+      }
     }
 }
 
@@ -193,6 +180,14 @@ double diffusive_flux(double ul, double ur, double x, double y, double dx,
     return 0.0;
 }
 
+double source_kernel(double x, double y, double r, double x_0, double y_0) {
+  double radius = pow((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0), 0.5);
+  if (radius < r) {
+    return source_amplitude * exp(1.0 - (r / (r - radius)));
+  }
+  return 0.0;
+}
+
 // time derivative of u
 double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
              double u_ip2j, double u_ijm2, double u_ijm1, double u_ijp1,
@@ -200,12 +195,12 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
              double dt, struct Source *sources, int num_sources)
 {
     double u_limhj = u_im1j + 0.5 * plm_gradient(u_im2j, u_im1j, u_ij);
-    double u_rimhj = u_ij - 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
-    double u_liphj = u_ij + 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
+    double u_rimhj = u_ij   - 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
+    double u_liphj = u_ij   + 0.5 * plm_gradient(u_im1j, u_ij, u_ip1j);
     double u_riphj = u_ip1j - 0.5 * plm_gradient(u_ij, u_ip1j, u_ip2j);
     double u_lijmh = u_ijm1 + 0.5 * plm_gradient(u_ijm2, u_ijm1, u_ij);
-    double u_rijmh = u_ij - 0.5 * plm_gradient(u_ijm1, u_ij, u_ijp1);
-    double u_lijph = u_ij + 0.5 * plm_gradient(u_ijm1, u_ij, u_ijp1);
+    double u_rijmh = u_ij   - 0.5 * plm_gradient(u_ijm1, u_ij, u_ijp1);
+    double u_lijph = u_ij   + 0.5 * plm_gradient(u_ijm1, u_ij, u_ijp1);
     double u_rijph = u_ijp1 - 0.5 * plm_gradient(u_ij, u_ijp1, u_ijp2);
 
     double f_iphj = advective_flux(u_liphj, u_riphj, x + 0.5 * dx, y, 'x') +
@@ -221,8 +216,7 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
     for (int i = 0; i < num_sources; ++i) {
       double x_0 = sources[i].x;
       double y_0 = sources[i].y;
-      source_terms += source_amplitude * exp(-((x - x_0) * (x - x_0) +
-                                               (y - y_0) * (y - y_0)) / r / r);
+      source_terms += source_kernel(x, y, r, x_0, y_0);
     }
 
     return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source_terms;
@@ -242,7 +236,7 @@ double advective_timestep(double *x, double *y, double dx, double dy)
             }
         }
     }
-    return sqrt(dx * dy) / (max_velocity + 1.0E-12);
+    return sqrt(dx * dy) / (max_velocity + MIN_TIMESTEP_THRESHOLD);
 }
 
 // minimum timestep based on diffusion coefficient
@@ -256,7 +250,7 @@ double diffusive_timestep(double *x, double *y, double dx, double dy)
             }
         }
     }
-    return 0.5 * (dx * dy) / (max_diffusion + 1.0E-12);
+    return 0.5 * (dx * dy) / (max_diffusion + MIN_TIMESTEP_THRESHOLD);
 }
 
 // overall minimum timestep
@@ -371,7 +365,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
         memcpy(u0, u3, num_zones * num_zones * sizeof(double));
         free(u3);
 
-        if ((time_counter % 10) == 0) {
+        if ((time_counter % 2) == 0) {
             export_data(x, y, u0, u0, num_zones, time_counter);
         }
 
