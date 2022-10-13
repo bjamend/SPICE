@@ -180,22 +180,6 @@ double advective_flux(double ul, double ur, double x, double y, char axis)
     return 0.0;
 }
 
-// source terms
-double source_terms(double x, double y, double dt)
-{
-    double lambda = dt * source_production_rate;
-    double result = 0.0;
-    int source_count = poisson_sample(lambda, max_sources_per_timestep);
-
-    for (int i = 0; i < source_count; ++i) {
-        double x_0 = random_double();
-        double y_0 = random_double();
-        result += 10000.0 * // magic number?
-                  exp(-((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0)) / r / r);
-    }
-    return result;
-}
-
 // flux from diffusive term in diffusive-advective equation
 double diffusive_flux(double ul, double ur, double x, double y, double dx,
                       double dy, char axis)
@@ -232,8 +216,16 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
                     diffusive_flux(u_ij, u_ijp1, x, y + 0.5 * dy, dx, dy, 'y');
     double g_ijmh = advective_flux(u_lijmh, u_rijmh, x, y - 0.5 * dy, 'y') +
                     diffusive_flux(u_ijm1, u_ij, x, y - 0.5 * dy, dx, dy, 'y');
-    double source = source_terms(x, y, dt);
-    return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source;
+
+    double source_terms = 0.0;
+    for (int i = 0; i < num_sources; ++i) {
+      double x_0 = sources[i].x;
+      double y_0 = sources[i].y;
+      source_terms += source_amplitude * exp(-((x - x_0) * (x - x_0) +
+                                               (y - y_0) * (y - y_0)) / r / r);
+    }
+
+    return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source_terms;
 }
 
 // minimum timestep based on flow velocity
@@ -278,9 +270,18 @@ double timestep(double *x, double *y, double dx, double dy)
     return d_t;
 }
 
-void generate_sources(struct Source *sources, int *num_sources_this_step)
+void generate_source_coordinates(struct Source *sources,
+                                 int *num_sources_this_step, double dt)
 {
-    *num_sources_this_step = 0; // TODO
+    double lambda = dt * source_production_rate;
+    int source_count = poisson_sample(lambda, max_sources_per_timestep);
+
+    for (int i = 0; i < source_count; ++i) {
+      sources[i].x = random_double();
+      sources[i].y = random_double();
+    }
+
+    *num_sources_this_step = source_count;
 }
 
 // main rk3 algorithm
@@ -303,7 +304,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
         double t0 = t;
 
         boundary_condition(u0, u1, u2, u3, num_zones);
-        generate_sources(sources, &num_sources_this_step);
+        generate_source_coordinates(sources, &num_sources_this_step, dt);
 
         for (int i = 2; i < (num_zones - 2); ++i) {
             for (int j = 2; j < (num_zones - 2); ++j) {
@@ -370,7 +371,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
         memcpy(u0, u3, num_zones * num_zones * sizeof(double));
         free(u3);
 
-        if ((time_counter % 100) == 0) {
+        if ((time_counter % 10) == 0) {
             export_data(x, y, u0, u0, num_zones, time_counter);
         }
 
