@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #include "input.h"
 
@@ -107,7 +108,7 @@ void export_data(double *x, double *y, double *u, double *u0, int num_zones,
                  int counter)
 {
     char filepath[256];
-    snprintf(filepath, sizeof(filepath), "data/data%d.txt", counter);
+    snprintf(filepath, sizeof(filepath), "data/checkpoint%d.txt", counter / checkpoint_interval);
     FILE *f = fopen(filepath, "w");
     if (f == NULL) {
         printf("Error opening file (did you create a 'data' directory?)\n");
@@ -138,7 +139,7 @@ double flow_velocity(double x, double y, char axis)
 }
 
 // spatially-inhomogeneous diffusion coefficient
-double diffusion_coefficient(double x, double y) { return 0.2; }
+double diffusion_coefficient(double x, double y) { return 0.002; }
 
 // establish initial u (should be 0 by default)
 double initial_condition(double x, double y) { return 0.0; }
@@ -213,11 +214,11 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
                     diffusive_flux(u_ijm1, u_ij, x, y - 0.5 * dy, dx, dy, 'y');
 
     double source_terms = 0.0;
-    for (int i = 0; i < num_sources; ++i) {
-      double x_0 = sources[i].x;
-      double y_0 = sources[i].y;
-      source_terms += source_kernel(x, y, r, x_0, y_0);
-    }
+    // for (int i = 0; i < num_sources; ++i) {
+    //   double x_0 = sources[i].x;
+    //   double y_0 = sources[i].y;
+    //   source_terms += source_kernel(x, y, r, x_0, y_0);
+    // }
 
     return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source_terms;
 }
@@ -278,6 +279,15 @@ void generate_source_coordinates(struct Source *sources,
     *num_sources_this_step = source_count;
 }
 
+void abort_if_nan(double *u) {
+    for (int i = 0; i < (num_zones * num_zones); ++i) {
+      if (isnan(u[i])) {
+        printf("Code crashed, force exit.\n");
+        exit(1);
+      }
+    }
+}
+
 // main rk3 algorithm
 void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
 {
@@ -287,14 +297,15 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
                                                      sizeof(struct Source));
     int num_sources_this_step = 0;
 
+    double *u1 = malloc(num_zones * num_zones * sizeof(double));
+    double *u2 = malloc(num_zones * num_zones * sizeof(double));
+    double *u3 = malloc(num_zones * num_zones * sizeof(double));
+
     while (t < t_final) {
 
-        // generate sources here, and pass the list of sources to du_dt
+        clock_t start = clock();
 
         double dt = cfl * timestep(x, y, dx, dy);
-        double *u1 = malloc(num_zones * num_zones * sizeof(double));
-        double *u2 = malloc(num_zones * num_zones * sizeof(double));
-        double *u3 = malloc(num_zones * num_zones * sizeof(double));
         double t0 = t;
 
         boundary_condition(u0, u1, u2, u3, num_zones);
@@ -313,8 +324,7 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
                           u0[(i + 0) * num_zones + (j - 1)],
                           u0[(i + 0) * num_zones + (j + 1)],
                           u0[(i + 0) * num_zones + (j + 2)], x[i], y[j], dx, dy,
-                          t, dt, sources, num_sources_this_step) *
-                        dt;
+                          t, dt, sources, num_sources_this_step) * dt;
             }
         }
         t += dt;
@@ -334,11 +344,10 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
                               u1[(i + 0) * num_zones + (j - 1)],
                               u1[(i + 0) * num_zones + (j + 1)],
                               u1[(i + 0) * num_zones + (j + 2)], x[i], y[j], dx,
-                              dy, t, dt, sources, num_sources_this_step) *
-                        dt;
+                              dy, t, dt, sources, num_sources_this_step) * dt;
             }
         }
-        free(u1);
+
         t = (3.0 / 4.0) * t0 + (1.0 / 4.0) * (t + dt);
 
         for (int i = 2; i < (num_zones - 2); ++i) {
@@ -356,23 +365,33 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
                               u2[(i + 0) * num_zones + (j - 1)],
                               u2[(i + 0) * num_zones + (j + 1)],
                               u2[(i + 0) * num_zones + (j + 2)], x[i], y[j], dx,
-                              dy, t, dt, sources, num_sources_this_step) *
-                        dt;
+                              dy, t, dt, sources, num_sources_this_step) * dt;
             }
         }
-        free(u2);
         t = (1.0 / 3.0) * t0 + (2.0 / 3.0) * (t + dt);
         memcpy(u0, u3, num_zones * num_zones * sizeof(double));
-        free(u3);
 
-        if ((time_counter % 2) == 0) {
+        abort_if_nan(u0);
+
+        if ((time_counter % checkpoint_interval) == 0) {
             export_data(x, y, u0, u0, num_zones, time_counter);
+            printf("checkpoint%d.txt\n", time_counter / checkpoint_interval);
         }
 
         time_counter += 1;
 
-        printf("t=%f, %d\n", t, time_counter);
+        clock_t finish = clock();
+
+        // double time_between_steps = (double)(finish - start) / CLOCKS_PER_SEC;
+
+        double mzps = (CLOCKS_PER_SEC / ((double)(finish - start))) *
+                       num_zones * num_zones / 1E6;
+
+        printf("[t=%.2e, dt=%.2e, Mzps=%.2e]\n", t, dt, mzps);
     }
+    free(u1);
+    free(u2);
+    free(u3);
     free(sources);
 }
 
