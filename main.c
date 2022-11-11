@@ -11,6 +11,7 @@
 #define min3(a, b, c) (min2(a, min2(b, c)))
 
 #define MIN_TIMESTEP_THRESHOLD 1E-12
+#define PI 3.14159
 
 
 struct Source {
@@ -104,7 +105,7 @@ void construct_grid(double *x, double *y, double x_l, double y_l, double dx,
 }
 
 // exports coordinates, initial u, and final u to a text file
-void export_data(double *x, double *y, double *u, double *u0, int num_zones,
+void export_data(double t, double *x, double *y, double *u, int num_zones,
                  int counter)
 {
     char filepath[256];
@@ -116,8 +117,8 @@ void export_data(double *x, double *y, double *u, double *u0, int num_zones,
     }
     for (int i = 0; i < num_zones; ++i) {
         for (int j = 0; j < num_zones; ++j) {
-            fprintf(f, "%f, %f, %f, %f\n", x[i], y[j], u[i * num_zones + j],
-                    u0[i * num_zones + j]);
+            fprintf(f, "%.10e, %f, %f, %.10e\n", t, x[i], y[j],
+                    u[i * num_zones + j]);
         }
     }
     fclose(f);
@@ -139,10 +140,13 @@ double flow_velocity(double x, double y, char axis)
 }
 
 // spatially-inhomogeneous diffusion coefficient
-double diffusion_coefficient(double x, double y) { return 0.002; }
+double diffusion_coefficient(double x, double y) { return 0.2; }
 
 // establish initial u (should be 0 by default)
-double initial_condition(double x, double y) { return 0.0; }
+double initial_condition(double x, double y)
+{
+  return 0.0;
+}
 
 // flux from advective term in diffusive-advective equation
 double advective_flux(double ul, double ur, double x, double y, char axis)
@@ -184,9 +188,23 @@ double diffusive_flux(double ul, double ur, double x, double y, double dx,
 double source_kernel(double x, double y, double r, double x_0, double y_0) {
   double radius = pow((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0), 0.5);
   if (radius < r) {
-    return source_amplitude * exp(1.0 - (r / (r - radius)));
+    return source_yield / PI / r / r;
   }
   return 0.0;
+}
+
+void generate_source_coordinates(struct Source *sources,
+                                 int *num_sources_this_step, double dt)
+{
+    double lambda = dt * source_production_rate;
+    int source_count = poisson_sample(lambda, max_sources_per_timestep);
+
+    for (int i = 0; i < source_count; ++i) {
+      sources[i].x = 50.0 * random_double();
+      sources[i].y = 50.0 * random_double();
+    }
+
+    *num_sources_this_step = source_count;
 }
 
 // time derivative of u
@@ -214,11 +232,11 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
                     diffusive_flux(u_ijm1, u_ij, x, y - 0.5 * dy, dx, dy, 'y');
 
     double source_terms = 0.0;
-    // for (int i = 0; i < num_sources; ++i) {
-    //   double x_0 = sources[i].x;
-    //   double y_0 = sources[i].y;
-    //   source_terms += source_kernel(x, y, r, x_0, y_0);
-    // }
+    for (int i = 0; i < num_sources; ++i) {
+      double x_0 = sources[i].x;
+      double y_0 = sources[i].y;
+      source_terms += source_kernel(x, y, r, x_0, y_0);
+    }
 
     return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source_terms;
 }
@@ -251,7 +269,7 @@ double diffusive_timestep(double *x, double *y, double dx, double dy)
             }
         }
     }
-    return 0.5 * (dx * dy) / (max_diffusion + MIN_TIMESTEP_THRESHOLD);
+    return 0.05 * (dx * dy) / (max_diffusion + MIN_TIMESTEP_THRESHOLD);
 }
 
 // overall minimum timestep
@@ -263,20 +281,6 @@ double timestep(double *x, double *y, double dx, double dy)
         return a_t;
     }
     return d_t;
-}
-
-void generate_source_coordinates(struct Source *sources,
-                                 int *num_sources_this_step, double dt)
-{
-    double lambda = dt * source_production_rate;
-    int source_count = poisson_sample(lambda, max_sources_per_timestep);
-
-    for (int i = 0; i < source_count; ++i) {
-      sources[i].x = random_double();
-      sources[i].y = random_double();
-    }
-
-    *num_sources_this_step = source_count;
 }
 
 void abort_if_nan(double *u) {
@@ -374,15 +378,13 @@ void rk3(double *u0, double t, double *x, double *y, double dx, double dy)
         abort_if_nan(u0);
 
         if ((time_counter % checkpoint_interval) == 0) {
-            export_data(x, y, u0, u0, num_zones, time_counter);
+            export_data(t, x, y, u0, num_zones, time_counter+1);
             printf("checkpoint%d.txt\n", time_counter / checkpoint_interval);
         }
 
         time_counter += 1;
 
         clock_t finish = clock();
-
-        // double time_between_steps = (double)(finish - start) / CLOCKS_PER_SEC;
 
         double mzps = (CLOCKS_PER_SEC / ((double)(finish - start))) *
                        num_zones * num_zones / 1E6;
@@ -401,10 +403,10 @@ int main()
     double x[num_zones];
     double y[num_zones];
     const double x_l = 0.0;
-    const double x_r = 1.0;
+    const double x_r = 50.0;
     const double dx = (x_r - x_l) / num_zones;
     const double y_l = 0.0;
-    const double y_r = 1.0;
+    const double y_r = 50.0;
     const double dy = (y_r - y_l) / num_zones;
 
     construct_grid(x, y, x_l, y_l, dx, dy);
@@ -418,6 +420,9 @@ int main()
             ui[i * num_zones + j] = initial_condition(x[i], y[j]);
         }
     }
+
+    // save t=0 checkpoint
+    export_data(t, x, y, u0, num_zones, 0);
 
     // evolve the simulation in time
     rk3(u0, t, x, y, dx, dy);
