@@ -2,7 +2,7 @@ import matplotlib.pylab as plt
 import numpy as np
 import os
 
-with open(os.path.normpath(os.getcwd()) + '/data/checkpoint524.txt') as f:
+with open(os.path.normpath(os.getcwd()) + '/data/checkpoint256.txt') as f:
     lines = f.readlines()
     t = [float(line.split(',')[0]) for line in lines]
     x = [float(line.split(',')[1]) for line in lines]
@@ -22,6 +22,6 @@ for i in range(num_zones):
         u_values[j, i]  = u[num_zones * i + j]
 
 fig, ax = plt.subplots(1, 1, figsize=(6, 6))
-ax.pcolormesh(x_values, y_values, u_values, shading='auto', cmap='plasma', vmin=0.0, vmax=1.0)
+ax.pcolormesh(x_values, y_values, u_values, shading='auto', cmap='plasma', vmin=0, vmax=4E4)
 plt.tight_layout()
 plt.show()

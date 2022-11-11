@@ -185,10 +185,10 @@ double diffusive_flux(double ul, double ur, double x, double y, double dx,
     return 0.0;
 }
 
-double source_kernel(double x, double y, double r, double x_0, double y_0) {
+double source_kernel(double x, double y, double r, double x_0, double y_0, double dt) {
   double radius = pow((x - x_0) * (x - x_0) + (y - y_0) * (y - y_0), 0.5);
   if (radius < r) {
-    return source_yield / PI / r / r;
+    return source_yield / PI / r / r / dt;
   }
   return 0.0;
 }
@@ -235,7 +235,7 @@ double du_dt(double u_im2j, double u_im1j, double u_ij, double u_ip1j,
     for (int i = 0; i < num_sources; ++i) {
       double x_0 = sources[i].x;
       double y_0 = sources[i].y;
-      source_terms += source_kernel(x, y, r, x_0, y_0);
+      source_terms += source_kernel(x, y, r, x_0, y_0, dt);
     }
 
     return -(f_iphj - f_imhj) / dx - (g_ijph - g_ijmh) / dy + source_terms;
